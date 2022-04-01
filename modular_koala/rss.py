@@ -142,9 +142,9 @@ class RSS(object):
         self.spaxels_table = spaxels_table
 
 
-# =============================================================================
-# Mask layer
-# =============================================================================
+    # =============================================================================
+    # Mask layer
+    # =============================================================================
     def mask_layer(self,index=-1):
         """
         Identify the layers in the binary mask layer.
@@ -160,9 +160,9 @@ class RSS(object):
         return bitfield_to_boolean_mask(mask, ignore_flags=ignore_flags)
 
 
-# =============================================================================
-# Imshow data
-# =============================================================================
+    # =============================================================================
+    # Imshow data
+    # =============================================================================
     def show(self,pmin=5,pmax=95,mask=False,**kwargs):
         
 
@@ -177,9 +177,9 @@ class RSS(object):
         
         plt.imshow(data,vmin=vmin,vmax=vmax,**kwargs)
 
-# =============================================================================
-# show/save formated log        
-# =============================================================================
+    # =============================================================================
+    # show/save formated log        
+    # =============================================================================
     def formated_log(self,verbose=True, save=None):
         
         pretty_line = '-------------------------------------------------------------------------------'
@@ -242,9 +242,24 @@ class RSS(object):
                   'mask':self.mask,
                   }
 
-        hdu = fits.PrimaryHDU(data = data[layer])
-        hdu.header = self.header
-        hdu.writeto(name=name,overwrite=overwrite)
+        primary_hdu = fits.PrimaryHDU(data = data[layer])
+        primary_hdu.header = self.header
+        primary_hdu.verify('fix') 
+        
+        if self.spaxels_table is not None:
+
+            # TODO: Why add again this information again in the table header?
+            self.spaxels_table.header['CENRA']  =  self.header['RACEN']  / ( 180/np.pi )   # Must be in radians 
+            self.spaxels_table.header['CENDEC']  =  self.header['DECCEN'] / ( 180/np.pi )
+            
+            hdu_list = fits.HDUList([primary_hdu,self.spaxels_table]) 
+            hdu_list.writeto(name, overwrite=True)     
+
+        else:                
+            # Write the fits
+            primary_hdu.writeto(name=name,overwrite=overwrite)
+        
+        
         
 
 # =============================================================================

@@ -424,7 +424,7 @@ def fix_wavelengths(rss,
 
         # Be sure the lines we are using are in the requested wavelength range        
         # if fibre != -1:
-        vprint("  Checking the values of skylines in the file", sky_lines_file,'\n')
+        vprint("\n  Checking the values of skylines in the file", sky_lines_file,'\n')
         if verbose:
             print('\n')
             sky_line['center', 'fnl','lowlow','lowhigh','highlow','highhigh','lmin','lmax'].pprint()  

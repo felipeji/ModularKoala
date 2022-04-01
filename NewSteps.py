@@ -13,9 +13,6 @@ from astropy.wcs import WCS
 from astropy.io import fits
 
 
-
-
-
 # =============================================================================
 # Originals Clean steps
 # =============================================================================
@@ -34,10 +31,28 @@ from astropy.io import fits
 10. Emission lines identification E 
 11. Correcting small CCD / sky residuals R  (Cosmic)
 12. Saving the processed / cleaned RSS file.
+
+
+List and description of RSS 
+
+modular_koala/input_data/sample_RSS/385R/27feb20025red.fits HD60753 C 3W WIDE
+modular_koala/input_data/sample_RSS/385R/27feb20026red.fits HD60753 B 3S WIDE
+modular_koala/input_data/sample_RSS/385R/27feb20027red.fits HD60753 A WIDE
+
+modular_koala/input_data/sample_RSS/385R/27feb20028red.fits HILT600 A
+modular_koala/input_data/sample_RSS/385R/27feb20029red.fits HILT600 B 3S
+modular_koala/input_data/sample_RSS/385R/27feb20030red.fits HILT600 C 3W
+
+modular_koala/input_data/sample_RSS/385R/27feb20031red.fits Tol30 A PA0
+
+modular_koala/input_data/sample_RSS/385R/27feb20032red.fits He2-10 B 1.5S
+modular_koala/input_data/sample_RSS/385R/27feb20033red.fits He2-10 C 1.5S 3E
+modular_koala/input_data/sample_RSS/385R/27feb20034red.fits He2-10 D 18S 3E
+modular_koala/input_data/sample_RSS/385R/27feb20035red.fits He2-10 E 1.5E
+modular_koala/input_data/sample_RSS/385R/27feb20036red.fits He2-10 F 1.5E 1.5S
+
+modular_koala/input_data/sample_RSS/385R/combined_skyflat_red.fits SKYFLAT
 """
-
-
-
 
 
 
@@ -47,41 +62,162 @@ from astropy.io import fits
 # =============================================================================
 # 1. Reading the data
 # =============================================================================
-from modular_koala.rss import read_rss
+# Main class for reading RSS files into RSS class
+from modular_koala.rss import read_rss 
 
-# Data path
-path = "/Users/felipe/DataCentral/KOALA/sample_RSS/385R/"
-file_path = os.path.join(path, "27feb20033red.fits")
+# Ancilliary function to match the current structure of a PyKoala header
+from modular_koala.ancillary import py_koala_header 
+
+# Ancilliary function to match the current structure of a PyKoala spaxels table
+from modular_koala.ancillary import py_koala_spaxels_table
+
+# COMMENT: The code repits any time we read a RSS file. But at the end of the day
+# for reading KOALA RSS we are only telling the task a file path. In that way
+# we keep RSS class simple and useful for any RSS data (only file_path and WCS
+# are required arguments). At the same time is easy to write a function to read
+# KOALA RSS, incluiding headers and spaxels table passing only file_path argument
 
 
-# Basics parameter for reading RSS
-# Parameters
-header = fits.getheader(file_path)
+
+# Standard star: HD60753 ------------------------------------------------------
+file_path = 'modular_koala/input_data/sample_RSS/385R/27feb20025red.fits'
+
+# Constructing PyKoala header from 2dfdr (header[0] and header[2]) 
+header = fits.getheader(file_path,0) + fits.getheader(file_path,2)
+koala_header = py_koala_header(header)
+
+# WCS
 koala_wcs = WCS(header)
 
+# Constructing Pykoala Spaxels table from 2dfdr spaxels table (data[2])
 spaxels_table = fits.getdata(file_path,2)
+koala_spaxels_table = py_koala_spaxels_table(spaxels_table)
 
-bad_spaxels_list = np.arange(len(spaxels_table['SELECTED']))[~np.bool_(spaxels_table['SELECTED'])].tolist()       
+# List of bad spaxels from 2dfdr spaxels table
+bad_spaxels_list = (spaxels_table['SPEC_ID'][spaxels_table['SELECTED']==0]-1).tolist() 
+# -1 to start in 0 rather than in 1
 
 
-# Reading data
-rss_raw = read_rss(file_path, 
+# Read RSS file into PyKoala structure
+std_rss = read_rss(file_path, 
                    wcs= koala_wcs, 
                    bad_spaxels_list = bad_spaxels_list,
-                   header=header
+                   header=koala_header,
+                   spaxels_table=koala_spaxels_table,
                    )
 
-rss_raw.show()
+
+# combined_skyflat_red --------------------------------------------------------
+file_path = 'modular_koala/input_data/sample_RSS/385R/combined_skyflat_red.fits'
+
+# Constructing PyKoala header from 2dfdr (header[0] and header[2]) 
+header = fits.getheader(file_path,0) + fits.getheader(file_path,2)
+koala_header = py_koala_header(header)
+
+# WCS
+koala_wcs = WCS(header)
+
+# Constructing Pykoala Spaxels table from 2dfdr spaxels table (data[2])
+spaxels_table = fits.getdata(file_path,2)
+koala_spaxels_table = py_koala_spaxels_table(spaxels_table)
+
+# List of bad spaxels from 2dfdr spaxels table
+bad_spaxels_list = (spaxels_table['SPEC_ID'][spaxels_table['SELECTED']==0]-1).tolist()
+# -1 to start in 0 rather than in 1
+
+
+# Read RSS file into PyKoala structure
+skyflat_rss = read_rss(file_path, 
+                   wcs= koala_wcs, 
+                   bad_spaxels_list = bad_spaxels_list,
+                   header=koala_header,
+                   spaxels_table=koala_spaxels_table,
+                   )
+
+
+# Object: Tol30 ---------------------------------------------------------------
+file_path = 'modular_koala/input_data/sample_RSS/385R/27feb20031red.fits'
+
+# Constructing PyKoala header from 2dfdr (header[0] and header[2]) 
+header = fits.getheader(file_path,0) + fits.getheader(file_path,2)
+koala_header = py_koala_header(header)
+
+# WCS
+koala_wcs = WCS(header)
+
+# Constructing Pykoala Spaxels table from 2dfdr spaxels table (data[2])
+spaxels_table = fits.getdata(file_path,2)
+koala_spaxels_table = py_koala_spaxels_table(spaxels_table)
+
+# List of bad spaxels from 2dfdr spaxels table
+bad_spaxels_list = (spaxels_table['SPEC_ID'][spaxels_table['SELECTED']==0]-1).tolist() 
+# -1 to start in 0 rather than in 1
+
+
+# Read RSS file into PyKoala structure
+tol30_rss = read_rss(file_path, 
+                   wcs= koala_wcs, 
+                   bad_spaxels_list = bad_spaxels_list,
+                   header=koala_header,
+                   spaxels_table=koala_spaxels_table,
+                   )
+
+# Object: He2_100 -------------------------------------------------------------
+file_path = 'modular_koala/input_data/sample_RSS/385R/27feb20032red.fits'
+
+# Constructing PyKoala header from 2dfdr (header[0] and header[2]) 
+header = fits.getheader(file_path,0) + fits.getheader(file_path,2)
+koala_header = py_koala_header(header)
+
+# WCS
+koala_wcs = WCS(header)
+
+# Constructing Pykoala Spaxels table from 2dfdr spaxels table (data[2])
+spaxels_table = fits.getdata(file_path,2)
+koala_spaxels_table = py_koala_spaxels_table(spaxels_table)
+
+# List of bad spaxels from 2dfdr spaxels table
+bad_spaxels_list = (spaxels_table['SPEC_ID'][spaxels_table['SELECTED']==0]-1).tolist() 
+# -1 to start in 0 rather than in 1
+
+
+# Read RSS file into PyKoala structure
+he2_100_rss = read_rss(file_path, 
+                   wcs= koala_wcs, 
+                   bad_spaxels_list = bad_spaxels_list,
+                   header=koala_header,
+                   spaxels_table=koala_spaxels_table,
+                   )
+
+#------------------------------------------------------------------------------
+
+# List of RSS corresponding to objects to iterate (as an example) further.
+# More elegant to use dict here, buy we keep simple for geting the main idea.
+ 
+sci_rss = [tol30_rss,he2_100_rss]
 
 
 # =============================================================================
-# 2. Masking the edges of the CCD and replacing NaN with the median. 
+# 2. Creating a mask with the valid data (masking the edges of the CCD).  
 # =============================================================================
-
+# Edges are automatically detected. Only NaNs pixels are corrected
 from modular_koala.clean_residuals import fix_edges
 
-rss_edges = fix_edges(rss_raw,verbose=True)
-rss_edges.show()
+# skyflat
+skyflat_edges = fix_edges(skyflat_rss,verbose=True)
+skyflat_edges.show()
+
+
+# standard star
+std_edges = fix_edges(std_rss,verbose=True)
+std_edges.show()
+
+
+# Iterating over all the science objects
+sci_edge = []
+
+for rss in sci_rss:
+    sci_edge.append( fix_edges(rss,verbose=True) )
 
 
 
@@ -90,71 +226,81 @@ rss_edges.show()
 # =============================================================================
 # NaNs
 from modular_koala.clean_residuals import clean_nans
-rss_clean_nans = clean_nans(rss_edges)
 
 
-"""
-plt.figure(1)
-rss_edges.show()
+# skyflat
+skyflat_clean = clean_nans(skyflat_edges,verbose=True)
+skyflat_clean.show()
 
-plt.figure(2)
-rss_clean_nans.show()
-"""
+
+# standard star
+std_clean = clean_nans(std_edges,verbose=True)
+std_clean.show()
+
+
+# Iterating over all the science objects
+sci_clean = []
+
+for rss in sci_edge:
+    sci_clean.append( clean_nans(rss,verbose=True) )
+
+
 
 # =============================================================================
 # 4. Fixing small wavelength shifts 
 # =============================================================================
-# Edges
-from modular_koala.fix_wavelengths import fix_wavelengths_edges
-fixed_wl_edge = fix_wavelengths_edges(rss_clean_nans)
-
-# Fix wavelengths 
+# We compute and apply the wavelenght drift solution on the science RSS and then 
+# we apply one of this solution to the skyflat and the std   
 from modular_koala.fix_wavelengths import fix_wavelengths
-fixed_wl = fix_wavelengths(rss_clean_nans, grating='385R') 
 
-# Comparison
+
+# Iterating over all the science objects
+sci_drift = []
+
+for rss in sci_clean:
+    sci_drift.append( fix_wavelengths(rss, grating='385R',verbose=True) )
+
+
+# Compare the solution in the two science RSS
 from modular_koala.fix_wavelengths import compare_fix_wavelengths
-compare_fix_wavelengths(fixed_wl_edge,fixed_wl)
+compare_fix_wavelengths(sci_drift[0],sci_drift[1])
+
+
+# We apply the wavelength correction from Tol30 rss (i.e. first rss in sci_drift )
+# to skyflat and std
+sol = sci_drift[0].log['wavelenght fix']['sol']
+
+# skyflat
+skyflat_drift = fix_wavelengths(skyflat_clean, grating='385R',sol = sol) 
+
+#std
+std_drift = fix_wavelengths(std_clean, grating='385R',sol = sol) 
+
+
+
 
 
 # =============================================================================
 # 5. Applying throughput
 # =============================================================================
-# Relative
-from modular_koala.throughput import relative_throughput
-
-rss_relative_throughput = relative_throughput(fixed_wl) 
-
-
 # Constructing the 2D throughput from sky_flat
-# Reading sky_flat
-file_path = "/Users/felipe/DataCentral/KOALA/sample_RSS/385R/throughput_2D_20180227_385R.fits"
-
-# Parameters
-header = fits.getheader(file_path)
-koala_wcs = WCS(header)
-
-
-# Reading data
- #print("\n> Reading a COMBINED skyflat / domeflat to get the 2D throughput...")
-
-skyflat = read_rss(file_path, 
-                   wcs= koala_wcs)
-# Applying wavelength correction
-sol = fixed_wl.log['wavelenght fix']['sol']
-skyflat_wl = fix_wavelengths(skyflat, grating='385R',sol = sol) 
-
-# Correnting edges and NaN
-skyflat_edges = fix_edges(skyflat_wl,verbose=True)
-skyflat_clean = clean_nans(skyflat_edges)
-
-
 from modular_koala.throughput import get_from_sky_flat
-throughput = get_from_sky_flat(skyflat_clean)
+throughput_2D = get_from_sky_flat(skyflat_drift)
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+# We apply the throughput to the std and the science rss
 from modular_koala.throughput import apply_throughput
 
 # From 2D array
@@ -273,47 +419,6 @@ plt.plot(w,tellurric_correction.telluric_correction,label='new')
 # =============================================================================
 """
 
-header = fits.getheader('/Users/felipe/DataCentral/KOALA/sample_RSS/385R/27feb20031red.fits')
-
-# Valores ya existentes en el header
-    header['BITPIX']  =  16  #TODO: En el header pone -32, se fuerza el cambio por algo?
-    header["ORIGIN"]  = 'AAO'    #    / Originating Institution                        
-    header["TELESCOP"]= 'Anglo-Australian Telescope'    # / Telescope Name  
-    header["ALT_OBS"] =                 1164 # / Altitude of observatory in metres              
-    header["LAT_OBS"] =            -31.27704 # / Observatory latitude in degrees                
-    header["LONG_OBS"]=             149.0661 # / Observatory longitude in degrees 
-    header["INSTRUME"] = "AAOMEGA-KOALA"             # / Instrument in use  
-    header["GRATID"]  = '385R'      # / Disperser ID 
-    header["SPECTID"] = 'RD'                        # / Spectrograph ID                                
-    header["DICHROIC"]= 'X5700'                        # / Dichroic name   ---> CHANGE if using X6700!!    
-    header['OBJECT'] = 'HILT600 A'
-    header["EXPOSED"] = 120
-    header["ZDSTART"]= 35.5060963215581 
-    header["ZDEND"]= 35.3457657340589
-    header['NAXIS']   =   2                              # / number of array dimensions                       
-    header['NAXIS1']  =   2048                 
-    header['NAXIS2']  =   1000                 
-    header['TEL_PA'] = 89.9177910093928
-    header["CTYPE2"] = 'Fibre number'          # / Label for axis 2  
-    header["CUNIT2"] = ' '           # / Units for axis 2     
-    header["CTYPE1"] = 'Wavelength'          # / Label for axis 2  
-    header["CUNIT1"] = 'Angstroms'           # / Units for axis 2     
-
-    header["CRVAL1"] = 7692.370367828 #  / Co-ordinate value of axis 2
-    header["CDELT1"] = 1.57518231234 # 
-    header["CRPIX1"] = 1024 # 1024. / Reference pixel along axis 2
-    header["CRVAL2"] = 5.000000000000E-01 # / Co-ordinate value of axis 2  
-    header["CDELT2"] = 1.000000000000E+00 # / Co-ordinate increment along axis 2
-    header["CRPIX2"] = 1.000000000000E+00 # / Reference pixel along axis 2 
- 
-    
-    # Aca se cambia el valor de la cabecera solo para RA y DEC (originalmente CENRA, CENDEC) 
-    # Sería mejor respetar esto y dentro de la rutina llamar segun este valor o el que sea que defina RA y Dec en la cabecera.
-    header['RAcen'] = rss.RA_centre_deg #TODO: not in header  ???
-    header['DECcen'] = rss.DEC_centre_deg # TODO: not in header ???
- 
-
-
 # Valores agregados por PyKoala
                 
         header["SOL0"] = sol[0]
@@ -349,68 +454,24 @@ header = fits.getheader('/Users/felipe/DataCentral/KOALA/sample_RSS/385R/27feb20
 
 
 
+# TODO: Why add again this information
+py_koala_spaxels_table.header['CENRA']  =  rss.RA_centre_deg  / ( 180/np.pi )   # Must be in radians 
+py_koala_spaxels_table.header['CENDEC']  =  rss.DEC_centre_deg / ( 180/np.pi )
+
+fits_image_hdu = fits.PrimaryHDU(data)
+# TO BE DONE    
+errors = [0]  ### TO BE DONE                
+error_hdu = fits.ImageHDU(errors)
 
 
-# Spaxels Table 
+hdu_list = fits.HDUList([fits_image_hdu,error_hdu, header2_hdu]) 
 
-header2_all_fibres = fits.getdata('/Users/felipe/DataCentral/KOALA/sample_RSS/385R/27feb20031red.fits',2)
-
-
-
-    # Header 2 with the RA and DEC info!    
-    header2_all_fibres = rss.header2_data  
-    header2_good_fibre = []
-    header2_original_fibre = []
-    header2_new_fibre = []
-    header2_delta_RA=[]
-    header2_delta_DEC=[]
-    header2_2048 =[]
-    header2_0 =[]
-    
-    fibre = 1
-    for i in range (len(header2_all_fibres)):
-        if header2_all_fibres[i][1]  == 1:
-            header2_original_fibre.append(i+1)
-            header2_new_fibre.append(fibre)
-            header2_good_fibre.append(1)
-            header2_delta_RA.append(header2_all_fibres[i][5])
-            header2_delta_DEC.append(header2_all_fibres[i][6])
-            header2_2048.append(2048)
-            header2_0.append(0)
-            fibre = fibre + 1
-     
-#    header2_=[header2_new_fibre, header2_good_fibre, header2_good_fibre, header2_2048, header2_0,  header2_delta_RA,  header2_delta_DEC,  header2_original_fibre]
-#    header2 = np.array(header2_).T.tolist()   
-#    header2_hdu = fits.ImageHDU(header2)
-            
-    col1 = fits.Column(name='Fibre', format='I', array=np.array(header2_new_fibre))
-    col2 = fits.Column(name='Status', format='I', array=np.array(header2_good_fibre))
-    col3 = fits.Column(name='Ones', format='I', array=np.array(header2_good_fibre))
-    col4 = fits.Column(name='Wavelengths', format='I', array=np.array(header2_2048))
-    col5 = fits.Column(name='Zeros', format='I', array=np.array(header2_0))
-    col6 = fits.Column(name='Delta_RA', format='D', array=np.array(header2_delta_RA))
-    col7 = fits.Column(name='Delta_Dec', format='D', array=np.array(header2_delta_DEC))
-    col8 = fits.Column(name='Fibre_OLD', format='I', array=np.array(header2_original_fibre))
-    
-    cols = fits.ColDefs([col1,col2,col3,col4,col5,col6,col7,col8])
-    header2_hdu = fits.BinTableHDU.from_columns(cols)
-    
-    header2_hdu.header['CENRA']  =  rss.RA_centre_deg  / ( 180/np.pi )   # Must be in radians
-    header2_hdu.header['CENDEC']  =  rss.DEC_centre_deg / ( 180/np.pi )
-    
-    hdu_list = fits.HDUList([fits_image_hdu,error_hdu, header2_hdu]) #  hdu_list = fits.HDUList([fits_image_hdu, wavelengths_hdu, flux_correction_hdu])
-
-    hdu_list.writeto(fits_file, overwrite=True) 
-
-
+hdu_list.writeto(fits_file, overwrite=True) 
 
 
 
 
 """
-
-
-
 
 
 
