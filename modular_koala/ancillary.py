@@ -139,7 +139,46 @@ def py_koala_spaxels_table(spaxels_table):
 
 
 
+# Originally a method of RSS
 
+def cut_wave(rss,
+             wave,
+             wave_index=-1,
+             #plot=False,
+             #ymax="",
+             ):
+    """
+
+    Parameters
+    ----------
+    wave : wavelength to be cut
+        DESCRIPTION.
+    plot : TYPE, optional
+        DESCRIPTION. The default is False.
+    ymax : TYPE, optional
+        DESCRIPTION. The default is "".
+
+    Returns
+    -------
+    corte_wave : TYPE
+        DESCRIPTION.
+
+    """
+    w = rss.wavelength
+    if wave_index == -1:
+        _w_ = np.abs(w - wave)
+        w_min = np.nanmin(_w_)
+        wave_index = _w_.tolist().index(w_min)
+    else:
+        wave = w[wave_index]
+    corte_wave = rss.intensity_corrected[:, wave_index]
+
+    # if plot:
+    #     x = range(rss.intensity_corrected.shape[0])
+    #     ptitle = "Intensity cut at " + np.str(wave) + " $\mathrm{\AA}$ - index =" + np.str(wave_index)
+    #     plot_plot(x, corte_wave, ymax=ymax, xlabel="Fibre", ptitle=ptitle)
+
+    return corte_wave
 
 
 

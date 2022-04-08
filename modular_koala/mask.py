@@ -122,7 +122,7 @@ class MaskFromFile():
         # Copy of the input RSS for containing the changes implemented by the task   
         rss_out = copy.deepcopy(rss)
         
-        rss_out.mask = self.mask    
+        rss_out.mask += self.mask    
         rss_out.log['mask from file']['comment']="- Mask obtainted using the RSS file "#", valid range of data:"+"\n"+ str(rss_out.wavelength[mask_max]) + " to " + str(rss_out.wavelength[mask_min]) + ",  in pixels = [ " + str(mask_max) + " , " + str(mask_min) + " ]"
 
 # =============================================================================

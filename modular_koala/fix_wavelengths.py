@@ -317,6 +317,15 @@ def fix_wavelengths_edges(rss,
 
 
     """
+    
+    
+    # Add solutions parameter to the header    
+    rss_out.header["SOL0"] = sol[0]
+    rss_out.header["SOL1"] = sol[1]
+    rss_out.header["SOL2"] = sol[2]
+
+
+    
     return rss_out
 
 

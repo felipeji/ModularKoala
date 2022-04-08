@@ -5,6 +5,7 @@ import numpy as np
 import copy
 import os
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 # =============================================================================
 # Astropy and associated packages
@@ -16,7 +17,6 @@ from astropy.nddata import bitfield_to_boolean_mask
 # =============================================================================
 # Modular
 from modular_koala.ancillary import vprint
-
 
 
 
@@ -36,20 +36,27 @@ def coord_range(rss_list):
 
 def detect_edge(rss):
     """
-    This functions detects the edges of a RSS. Returs the wavelenght and index
-    of the first and last valid data. 
-
+    Detect the edges of a RSS. Returns the minimum and maximum wavelength that 
+    determine the maximum interval with valid (i.e. no masked) data in all the 
+    spaxels.
+    
+    
     Parameters
     ----------
-    rss : TYPE
-        DESCRIPTION.
+    rss : RSS object.
 
     Returns
     -------
-    left : TYPE
-        DESCRIPTION.
-    rigth : TYPE
-        DESCRIPTION.
+    min_w : float
+        The lowest value (in units of the RSS wavelength) with 
+        valid data in all spaxels.
+    min_index : int
+        Index of min_w in the RSS wavelength variable.
+    max_w : float
+        The higher value (in units of the RSS wavelength) with 
+        valid data in all spaxels.
+    max_index : int
+        Index of max_w in the RSS wavelength variable.
 
     """
     collapsed = np.sum(rss.intensity,0)
@@ -70,8 +77,7 @@ def detect_edge(rss):
 
 
 
-
-
+# Blank dictionary for the log 
 blank_log = {'read':{'comment':None,'index':None},
          'mask from file':{'comment':None,'index':0},
          'blue edge':{'comment':None,'index':1},
@@ -81,13 +87,13 @@ blank_log = {'read':{'comment':None,'index':None},
          'wavelenght fix':{'comment':None,'index':None,'sol':[]},
          }
 
-
+# Blank Astropy Header object for the RSS header
+# Example how to add header value at the end
+# blank_header.append(('DARKCORR', 'OMIT', 'Dark Image Subtraction'), end=True)
 blank_header = fits.header.Header(cards=[], copy=False)
 
 
 
-# Example how to add header value at the end
-# blank_header.append(('DARKCORR', 'OMIT', 'Dark Image Subtraction'), end=True)
 
 
 
@@ -98,23 +104,42 @@ blank_header = fits.header.Header(cards=[], copy=False)
 
 class RSS(object):
     """
-    Collection of row-stacked spectra (RSS).
+    Container class for row-stacked spectra (RSS).
 
     Attributes
     ----------
-    wavelength: np.array(float)
-        Wavelength, in Angstrom
-    intensity: np.array(float)
+    intensity: numpy.ndarray(float)
         Intensity :math:`I_\lambda` per unit wavelength.
         Axis 0 corresponds to fiber ID
         Axis 1 Corresponds to spectral dimension
-    corrected_intensity: np.array(float)
-        Intensity with all the corresponding corrections applied.
-    variance: np.array(float)
+    wavelength: numpy.ndarray(float)
+        Wavelength, in Angstrom
+    variance: numpy.ndarray(float)
         Variance :math:`\sigma^2_\lambda` per unit wavelength
         (note the square in the definition of the variance).
-    corrected_variance: np.array(float)
-        Variance with all the corresponding corrections applied.
+    mask : numpy.ndarray(float)
+        Bit mask that records the pixels with individual corrections performed 
+        by the various processes:
+            Mask value      Correction
+            -----------     ----------------
+            1               Readed from file
+            2               Blue edge
+            4               Red edge
+            8               NaNs mask
+            16              Cosmic rays
+            32              Extreme negative
+            
+    intensity_corrected: numpy.ndarray(float)
+        Intensity with all the corresponding corrections applied (see log).
+    variance_corrected: numpy.ndarray(float)
+        Variance with all the corresponding corrections applied (see log).
+    log : dict
+        Dictionary containing a log of the processes applied on the rss.
+        
+    header : astropy.io.fits.header.Header object 
+        The header associated with data.
+    spaxels_table : astropy.io.fits.hdu.table.BinTableHDU object
+        Bin table containing spaxel metadata.
     """
 
     # -----------------------------------------------------------------------------
@@ -145,26 +170,84 @@ class RSS(object):
     # =============================================================================
     # Mask layer
     # =============================================================================
-    def mask_layer(self,index=-1):
+    def mask_layer(self,index=-1,verbose=False):
         """
-        Identify the layers in the binary mask layer.
-        
+        Filter the bit mask according the index value:
+            
+	     Index    Layer                Bit mask value    
+         ------   ----------------     --------------              
+         0        Readed from file     1                           
+         1        Blue edge            2                                 
+         2        Red edge             4                               
+         3        NaNs mask            8                                  
+         4        Cosmic rays          16                                 
+         5        Extreme negative     32                               
+
+
+        Parameters
+        ----------
+        index : int or list, optional
+            Layer index. The default -1 means that all the existing layers are 
+            returned.
+
+        Returns
+        -------
+        numpy.ndarray(bool)
+            Boolean mask with the layer (or layers) selected.
+
         """
+        vprint.verbose = verbose
         mask = self.mask.astype(int)
-        mask_value = 2**(index)
+        if type(index) is not list: index = [index]
         ignore_flags = [1,2,4,8,16,32]
-        try:
-            ignore_flags.remove(mask_value)
-        except:
-            print('Warning: '+str(index)+' is not a valid index. All layers considered')
+        
+        for i in index:
+            mask_value = 2**(i)
+    
+            try:
+                ignore_flags.remove(mask_value)
+            except:
+                print('Warning: '+str(index)+' is not a valid index.')
+            
+            vprint('Layers considered: ',ignore_flags)
+            
         return bitfield_to_boolean_mask(mask, ignore_flags=ignore_flags)
+    
+        
+    def show_mask(self,):
+        cmap = colors.ListedColormap(['darkgreen','blue','red','darkviolet','black','orange'])
+        plt.imshow(np.log2(self.mask),vmin=0,vmax=6,  cmap=cmap, interpolation='none')
+        #cb = plt.colorbar(figure,location="bottom",aspect=20)
+        
+        #ticks_position = np.arange(6)+0.5
+        #ticks_name = ['From file','Blue edge','Red edge','NaN\'s','Cosmics','Extreme \n negatives']
+        #cb.set_ticks(ticks_position)
+        #cb.set_ticklabels(ticks_name)
+
 
 
     # =============================================================================
     # Imshow data
     # =============================================================================
     def show(self,pmin=5,pmax=95,mask=False,**kwargs):
+        """
+        Simple "imshow" of the corrected data (i.e. self.intensity_corrected ).
+        Accept all (matplotlib.pyplot) imshow parameters.
         
+        In the future we will implement the PyKoala RSS display function here. 
+        
+        Parameters
+        ----------
+        pmin : float, optional
+            Minimum percentile of the data range that the colormap will covers. 
+            The default is 5.
+        pmax : TYPE, optional
+            Maximum percentile of the data range that the colormap will covers. 
+            The default is 95.
+        mask : bool, optional
+            True show the image with correceted pixels masked. 
+            The default is False.
+        """
 
         
         if mask:
@@ -176,6 +259,9 @@ class RSS(object):
 
         
         plt.imshow(data,vmin=vmin,vmax=vmax,**kwargs)
+        
+        
+        
 
     # =============================================================================
     # show/save formated log        
@@ -195,11 +281,12 @@ class RSS(object):
                 applied = isinstance(comment, str) 
                 
                 mask_index = {None:'',
-                              0 :'Mask index: 0 (bit mask value 2e0)',
-                              1 :'Mask index: 1 (bit mask value 2e1)',
-                              2 :'Mask index: 2 (bit mask value 2e2)',
-                              3 :'Mask index: 3 (bit mask value 2e3)',
-                              4 :'Mask index: 4 (bit mask value 2e4)',
+                              0 :'Mask index: 0 (bit mask value 2**0)',
+                              1 :'Mask index: 1 (bit mask value 2**1)',
+                              2 :'Mask index: 2 (bit mask value 2**2)',
+                              3 :'Mask index: 3 (bit mask value 2**3)',
+                              4 :'Mask index: 4 (bit mask value 2**4)',
+                              5 :'Mask index: 5 (bit mask value 2**5)',
                               }
                     
                 if applied:

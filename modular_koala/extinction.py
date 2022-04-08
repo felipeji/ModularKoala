@@ -16,6 +16,10 @@ import os
 # =============================================================================
 # Modular
 from modular_koala.ancillary import vprint
+from modular_koala.rss import detect_edge
+
+# Original
+from koala.plot_plot import plot_plot
 
 # =============================================================================
 
@@ -32,7 +36,7 @@ def apply_correction(rss,
                      extinction_file="",
                      verbose=True):
     """
-    This corrects for extinction using a given extiction correction and an observatory file
+    Corrects for extinction using a given extiction correction and an observatory file
 
     Parameters
     ----------
@@ -73,7 +77,7 @@ def extinction(rss,
                airmass,
                extinction_file=None,
                verbose=True,
-               # plot=False, Necesitamos redefinir los limite de wavelenght validos usando las mascaras
+               plot=False,
                ):
     """
     This task accounts and corrects for extinction due to gas and dusty
@@ -123,29 +127,38 @@ def extinction(rss,
                              extinction_corrected_airmass, s=0)
     extinction_correction = interpolate.splev(rss_out.wavelength, tck, der=0)
 
-    if verbose: print("  Observatory file with extinction curve :\n ", extinction_file)
+    vprint("  Observatory file with extinction curve :\n ", extinction_file)
 
 
-    # if plot:
-    #     cinco_por_ciento = 0.05 * (np.max(extinction_correction) - np.min(extinction_correction))
-    #     plot_plot(extinction_curve_wavelenghts, extinction_corrected_airmass, xmin=np.min(rss_out.wavelength),
-    #               xmax=np.max(rss_out.wavelength), ymin=np.min(extinction_correction) - cinco_por_ciento,
-    #               ymax=np.max(extinction_correction) - cinco_por_ciento,
-    #               vlines=[self.valid_wave_min, self.valid_wave_max],
-    #               ptitle='Correction for extinction using airmass = ' + str(np.round(self.airmass, 3)),
-    #               xlabel="Wavelength [$\mathrm{\AA}$]", ylabel="Flux correction", fig_size=fig_size,
-    #               statistics=False)
+    if plot:
+        valid_wave_min, min_index, valid_wave_max, max_index = detect_edge(rss)
+        cinco_por_ciento = 0.05 * (np.max(extinction_correction) - np.min(extinction_correction))
+        plot_plot(extinction_curve_wavelenghts, extinction_corrected_airmass, xmin=np.min(rss_out.wavelength),
+                  xmax=np.max(rss_out.wavelength), ymin=np.min(extinction_correction) - cinco_por_ciento,
+                  ymax=np.max(extinction_correction) - cinco_por_ciento,
+                  vlines=[valid_wave_min, valid_wave_max],
+                  ptitle='Correction for extinction using airmass = ' + str(np.round(airmass, 3)),
+                  xlabel="Wavelength [$\mathrm{\AA}$]", ylabel="Flux correction", fig_size=12,
+                  statistics=False)
 
 # =============================================================================
 # Apply_extinction
 # =============================================================================
-    apply_correction(rss = rss_out,
-                     airmass = airmass,
-                     extinction_correction = extinction_correction, 
-                     extinction_file = extinction_file,
-                     verbose = verbose
-                     )
+        
+    rss_out.intensity_corrected *= extinction_correction[np.newaxis, :]
+    rss_out.variance_corrected *= extinction_correction[np.newaxis, :]**2
     
+    
+    comment = ' '.join(["- Data corrected for extinction using file :",
+                        extinction_file,
+                        "Average airmass =",
+                        str(airmass)])
+    
+    rss.log['extinction'] = comment 
+
+    vprint("  Intensities corrected for extinction stored in self.intensity_corrected")
+    vprint("  Variance corrected for extinction stored in self.variance_corrected")
+
 
 
     return rss_out
